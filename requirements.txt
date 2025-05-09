@@ -1,0 +1,9 @@
+# platform: linux-64
+fastai=2.8.0
+numpy=1.26.4
+pandas=2.2.3
+python=3.9.21
+scikit-learn=1.6.1
+scipy=1.13.1
+timm=1.0.15
+torch=1.12.1
