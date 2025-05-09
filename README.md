@@ -39,8 +39,7 @@ If you use this code for your research, please cite our paper:
 liu2025softshape,
 title={Learning soft sparse shapes for efficient time-series classification},
 author={Zhen Liu and Yicheng Luo and Boyuan Li and Emadeldeen Eldele and Min Wu and Qianli Ma},
-booktitle={International Conference on Machine
-Learning},
+booktitle={International Conference on Machine Learning},
 year={2025}
 }
 ```
