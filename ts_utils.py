@@ -45,8 +45,8 @@ def evaluate_model(val_loader, model, loss):
     for data, target in val_loader:
         with torch.no_grad():
             val_pred, _ = model(data)
-            val_loss += loss(val_pred, target).item()
-            sum_len += len(target)
+            val_loss = val_loss + loss(val_pred, target).item()
+            sum_len = sum_len + len(target)
             val_pred_labels.append(torch.argmax(val_pred.data, axis=1).cpu().numpy())
             real_labels.append(target.cpu().numpy())
 

@@ -15,7 +15,6 @@ from ts_utils import set_seed, build_loss, save_cls_result, build_dataset, get_a
 from data.preprocessing import normalize_per_series, fill_nan_value, normalize_train_val_test
 from data.dataloader import UCRDataset
 from data.shape_size_hyp import ucr_hyp_dict_shape_size
-import torch.utils.data as data
 import argparse
 from models.SoftShapeModel import SoftShapeNet
 
@@ -27,25 +26,25 @@ if __name__ == '__main__':
     parser.add_argument('--random_seed', type=int, default=42, help='shuffle seed')
 
     # Dataset setup
-    parser.add_argument('--dataset', type=str, default='CBF', help='dataset(in ucr)')  # ACSF1 GunPointOldVersusYoung GunPoint
+    parser.add_argument('--dataset', type=str, default='CBF', help='dataset(in ucr)')  # ACSF1 GunPoint
     parser.add_argument('--dataroot', type=str, default='/home/lz/UCRArchive_2018', help='path of UCR folder')
-    parser.add_argument('--num_class', type=int, default=0, help='number of class')
+    parser.add_argument('--num_class', type=int, default=2, help='number of class')
     parser.add_argument('--normalize_way', type=str, default='single', help='single or train_set')
     parser.add_argument('--input_size', type=int, default=1, help='input_size')
    
-    # Model parameters:
+    # Model setup
     parser.add_argument('--emb_dim', type=int, default=128)
     parser.add_argument('--depth', type=int, default=2)
-    parser.add_argument('--sparse_rate', type=float, default=0.50)
-    parser.add_argument('--shape_size', type=int, default=8)
+    parser.add_argument('--sparse_rate', type=float, default=0.50, help='0.1, 0.3, or 0.7')
+    parser.add_argument('--shape_size', type=int, default=8, help='16, 32, or 48')
     parser.add_argument('--shape_use_ratio', type=int, default=0, help='0 is False, 1 is True')
     parser.add_argument('--shape_ratio', type=float, default=0.1)
     parser.add_argument('--shape_stride', type=int, default=4, help='the patch stride')
     parser.add_argument('--moe_num_experts', type=int, default=8)
-    parser.add_argument('--warm_up_epoch', type=int, default=150) 
-    parser.add_argument('--moeloss_rate', type=float, default=0.001)
+    parser.add_argument('--warm_up_epoch', type=int, default=150, help='50, 100 or 200')
+    parser.add_argument('--moeloss_rate', type=float, default=0.001, help='0.01 or 0.001')
 
-    # training setup
+    # Training setup
     parser.add_argument('--loss', type=str, default='cross_entropy', help='loss function')
     parser.add_argument('--optimizer', type=str, default='adam', help='optimizer')
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
@@ -54,6 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=500, help='training epoch')
     parser.add_argument('--cuda', type=str, default='cuda:3')
 
+    # Result setup
     parser.add_argument('--save_dir', type=str, default='/home/lz/SoftShape/result')
     parser.add_argument('--save_csv_name', type=str, default='softshape_five_fold_split')
 
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     args.shape_use_ratio = ucr_hyp_dict_shape_size[args.dataset]['shape_use_ratio']
     args.shape_ratio = ucr_hyp_dict_shape_size[args.dataset]['shape_ratio']
     
-    print("Dataset = ", args.dataset, ", shape_size = ", args.shape_size)
+    print("Training dataset = ", args.dataset, ", shape_size = ", args.shape_size)
     
     if args.shape_use_ratio == 1:
         args.shape_size = int(args.seq_len * args.shape_ratio)
@@ -99,7 +99,6 @@ if __name__ == '__main__':
     elif args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    losses = []
     test_accuracies = []
     train_time = 0.0
     
@@ -142,15 +141,9 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=0)
         test_loader = DataLoader(test_set, batch_size=args.batch_size, num_workers=0)
 
-        train_loss = []
-        train_accuracy = []
-        num_steps = args.epoch // args.batch_size
-
         last_loss = float('inf')
         stop_count = 0
         increase_count = 0
-
-        num_steps = train_set.__len__() // args.batch_size
 
         min_val_loss = float('inf')
         test_accuracy = 0
@@ -162,12 +155,9 @@ if __name__ == '__main__':
                 break
 
             epoch_train_loss = 0
-            epoch_train_acc = 0
             num_iterations = 0
 
             model.train()
-            train_embed = []
-
             for x, y in train_loader:
                 optimizer.zero_grad()
                 
@@ -177,28 +167,24 @@ if __name__ == '__main__':
                 step_loss.backward()
                 optimizer.step()
 
-                epoch_train_loss += step_loss.item()
-                epoch_train_acc += torch.sum(torch.argmax(pred.data, axis=1) == y) / len(y)
+                epoch_train_loss = epoch_train_loss + step_loss.item()
+                num_iterations = num_iterations + 1
 
-                num_iterations += 1
-
-            epoch_train_loss /= num_steps
-            epoch_train_acc /= num_steps
+            epoch_train_loss = epoch_train_loss / num_iterations
 
             model.eval()
             val_loss, val_accu = evaluate_model(val_loader, model, loss)
             if min_val_loss > val_loss:
                 min_val_loss = val_loss
-                end_val_epoch = epoch
                 test_loss, test_accuracy = evaluate_model(test_loader, model, loss)
 
-            if epoch > args.warm_up_epoch and abs(last_loss - val_loss) <= 1e-4:
-                stop_count += 1
+            if (epoch > args.warm_up_epoch) and (abs(last_loss - val_loss) <= 1e-4):
+                stop_count = stop_count + 1
             else:
                 stop_count = 0
 
-            if epoch > args.warm_up_epoch and val_loss > last_loss:
-                increase_count += 1
+            if (epoch > args.warm_up_epoch) and (val_loss > last_loss):
+                increase_count = increase_count + 1
             else:
                 increase_count = 0
 
@@ -211,7 +197,7 @@ if __name__ == '__main__':
         t = time.time() - t
         train_time += t
 
-        print('{} fold finish training'.format(i))
+        print('{} fold finish training.'.format(i))
         
     test_accuracies = torch.Tensor(test_accuracies).cpu().numpy()
 

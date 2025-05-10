@@ -42,7 +42,7 @@ class InceptionModule(Module):
         self.maxconvpool = nn.Sequential(*[nn.MaxPool1d(3, stride=1, padding=1), Conv1d(ni, nf, 1, bias=False)])
         self.concat = Concat()
         self.bn = BN1d(nf * 4)
-        self.act = nn.GELU()
+        self.act = nn.GELU()  ## Raw is ReLU
 
     def forward(self, x):
         input_tensor = x
@@ -111,9 +111,8 @@ class RMSNorm(nn.Module):
 
 
 class MoE_Block(nn.Module):
-    def __init__(self, input_size, output_size, num_experts, hidden_size, noisy_gating=True, k=1):
+    def __init__(self, input_size, output_size, num_experts, hidden_size, k=1):
         super(MoE_Block, self).__init__()
-        self.noisy_gating = noisy_gating
         self.num_experts = num_experts
         self.output_size = output_size
         self.input_size = input_size
@@ -176,7 +175,7 @@ class MoE_Block(nn.Module):
 
 
 class ShapeEmbedLayer(nn.Module):  
-    def __init__(self, seq_len, shape_size=8, in_chans=3, embed_dim=128, stride=1):
+    def __init__(self, seq_len, shape_size=8, in_chans=1, embed_dim=128, stride=4):
         super().__init__()
         stride = stride
         num_patches = int((seq_len - shape_size) / stride + 1)
@@ -230,19 +229,17 @@ class SoftShapeNet_layer(nn.Module):
             extra_token = torch.sum(non_topk, dim=1, keepdim=True)  # [B, 1, C]
             left_x = torch.gather(x * attn_x_score, dim=1, index=left_index)  # [B, left_tokens, C]
 
-            x = torch.cat([left_x, extra_token], dim=1)
-        else:
-            x = self.norm1(x)
-            attn_x_score = self.attention_head(x)
-            x = x * attn_x_score
-
-        incep_x = self.inception(self.norm2(x).permute(0, 2, 1))
-        reshape_incep_x = incep_x.permute(0, 2, 1)
-
-        if remain_ratio < 1.0:
+            x = torch.cat([left_x, extra_token], dim=1)           
+            incep_x = self.inception(self.norm2(x).permute(0, 2, 1))
+            reshape_incep_x = incep_x.permute(0, 2, 1)
             temp_moe_x, moe_loss = self.moe(self.norm2(x))
             x = x + temp_moe_x + reshape_incep_x
         else:
+            x = self.norm1(x)
+            attn_x_score = self.attention_head(x)
+            x = x * attn_x_score            
+            incep_x = self.inception(self.norm2(x).permute(0, 2, 1))
+            reshape_incep_x = incep_x.permute(0, 2, 1)
             moe_loss = 0.0
             x = x + reshape_incep_x
 

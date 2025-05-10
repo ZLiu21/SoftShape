@@ -42,7 +42,7 @@ for dataset in  ucr_dataset_128:
 
     save_csv_name = 'main_softshape_reuslts'  
 
-    with open('/home/lzheng/SoftShape/scripts/ucr_cls.sh', 'a') as f:
+    with open('/home/lz/SoftShape/scripts/ucr_cls.sh', 'a') as f:
         f.write('python main_softshape.py --dataset ' + dataset + ' --save_csv_name ' + save_csv_name + ' --cuda cuda:3' + ';\n')
 
 
