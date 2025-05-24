@@ -21,6 +21,7 @@ We used 128 UCR time series datasets for time-series classification.
 The datasets utilized in this study
 can be downloaded at [128 UCR datasets.](https://www.cs.ucr.edu/~eamonn/time_series_data_2018/UCRArchive_2018.zip)
 
+Please refer to **page 13** of the [PDF](https://www.cs.ucr.edu/~eamonn/time_series_data_2018/BriefingDocument2018.pdf) document for the password to access the zipped file of the UCR archive.
 
 ## Usage
 
