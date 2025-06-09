@@ -31,16 +31,17 @@ To obtain a trained SoftShape model for time series classification, please run
 ```bash
 python main_softshape.py --dataset [name of the UCR dataset you want to train]  ...
 ```
+Note: Setting ```args.use_large_batch = 1``` can effective in increasing runtime speed without degrading SoftShape's overall average classification accuracy performance on the UCR 128 datasets.
+
 For detailed options and examples, please refer to ```main_softshape.py```.
 
 ## Citation
 If you use this code for your research, please cite our paper:
 ```
-@inproceedings{
-liu2025softshape,
-title={Learning soft sparse shapes for efficient time-series classification},
-author={Zhen Liu and Yicheng Luo and Boyuan Li and Emadeldeen Eldele and Min Wu and Qianli Ma},
-booktitle={International Conference on Machine Learning},
-year={2025}
+@inproceedings{liu2025softshape,
+    title={Learning soft sparse shapes for efficient time-series classification},
+    author={Zhen Liu and Yicheng Luo and Boyuan Li and Emadeldeen Eldele and Min Wu and Qianli Ma},
+    booktitle={International Conference on Machine Learning},
+    year={2025}
 }
 ```

@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--weight_decay', type=float, default=0.0, help='weight decay')
     parser.add_argument('--batch_size', type=int, default=16, help='')
+    parser.add_argument('--use_large_batch', type=int, default=1, help='1 is True, 0 is False') ## Larger batch size can run faster
     parser.add_argument('--epoch', type=int, default=500, help='training epoch')
     parser.add_argument('--cuda', type=str, default='cuda:3')
 
@@ -86,6 +87,15 @@ if __name__ == '__main__':
     train_datasets, train_targets, val_datasets, val_targets, test_datasets, test_targets = get_all_datasets(
         sum_dataset, sum_target)
     
+    if args.use_large_batch == 1:
+        ''' 
+        Our latest experiments show that setting a larger batch size can effectively improve the runtime speed 
+        without degrading SoftShape's overall classification performance on the UCR 128 datasets.
+        '''
+        args.batch_size = 512
+        if train_datasets[0].shape[0] < args.batch_size:
+            args.batch_size = train_datasets[0].shape[0]
+        
     loss = build_loss(args).to(device)
     model = SoftShapeNet(seq_len=args.seq_len, shape_size=args.shape_size, num_channels=1, emb_dim=args.emb_dim, sparse_rate=args.sparse_rate, 
                          depth=args.depth, num_experts=args.moe_num_experts, num_classes=args.num_class, stride=args.shape_stride)
